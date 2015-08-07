@@ -1,3 +1,6 @@
+[原文地址](https://developer.valvesoftware.com/wiki/Latency_Compensating_Methods_in_Client/Server_In-game_Protocol_Design_and_Optimization#Game_Design_Implications_of_Lag_Compensation)
+
+
 ## Overview
 ## 概要
 
