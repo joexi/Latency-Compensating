@@ -140,6 +140,38 @@ Client-side prediction of movements requires us to let go of the "dumb" or minim
 
 To implement client-side prediction of movement, the following general procedure is used. As before, client inputs are sampled and a user command is generated. Also as before, this user command is sent off to the server. However, each user command (and the exact time it was generated) is stored on the client. The prediction algorithm uses these stored commands.
 
-为了引入客户端的行为预测，可以使用一下的常用步骤。就像之前那样，客户端的输入被创建为用户指令。同样，用户指令被发送至服务器。然而，每一条用户指令（以及生成这些指令所需的实际时间）被也会被保存在客户端。预测算法来使用这些用户指令。
+为了引入客户端的行为预测，可以使用一下的常用步骤。就像之前那样，客户端的输入被创建为用户指令。同样，用户指令被发送至服务器。然而，每一条用户指令（以及生成这些指令所需的实际时间）被也会被保存在客户端。预测算法会使用这些用户指令。
 
 For prediction, the last acknowledged movement from the server is used as a starting point. The acknowledgement indicates which user command was last acted upon by the server and also tells us the exact position (and other state data) of the player after that movement command was simulated on the server. The last acknowledged command will be somewhere in the past if there is any lag in the connection. For instance, if the client is running at 50 frames per second (fps) and has 100 milliseconds of latency (roundtrip), then the client will have stored up five user commands ahead of the last one acknowledged by the server. These five user commands are simulated on the client as a part of client-side prediction. Assuming full prediction1, the client will want to start with the latest data from the server, and then run the five user commands through "similar logic" to what the server uses for simulation of client movement. Running these commands should produce an accurate final state on the client (final player position is most important) that can be used to determine from what position to render the scene during the current frame.
+
+预测将从服务器端获取的最近一次确认的行为信息作为预测的起点，其中的“确认”意味着是上一条在经过服务器模拟后执行并同步了玩家位置信息（或者其他信息）的用户指令。只要有延时的存在，那么上一条确认指令某种意义上总是发生在过去的。比如，如果客户端以50fps的帧率运行游戏并且拥有100毫秒的延时，那么客户端在收到服务器的确认前就会存储5个用户指令,这5条指令就将被用于**客户端预测**。从客户端收到上一条指令开始，以和服务端相同的模拟方法来运行这5条指令，就是一个完整的预测。执行这些指令应当生成出决定了客户端上当前帧下在何位置进行渲染的最终的精确状态（玩家的最终位置信息是最重要的）。
+
+In Half-Life, minimizing discrepancies between client and server in the prediction logic is accomplished by sharing the identical movement code for players in both the server-side game code and the client-side game code. These are the routines in the pm_shared/ (which stands for "player movement shared") folder of the HL SDK. The input to the shared routines is encapsulated by the user command and a "from" player state. The output is the new player state after issuing the user command. The general algorithm on the client is as follows:
+
+在《半条命》中客户端和服务端之间通过预测逻辑来实现差异最小化的方式就是在客户端和服务端之间共享相同的行为代码。在HL SDK中pm_shared/目录下(即玩家行为共享) 有相关例程。共享例程的输入就是用户指令和玩家信息的封装。输出则是执行了用户指令后的玩家信息，客户端的常用算法如下所示：
+
+``` c
+
+"from state" <- state after last user command acknowledged by the server;
+
+"command" <- first command after last user command acknowledged by server;
+
+while (true)
+{
+	run "command" on "from state" to generate "to state";
+	if (this was the most up to date "command")
+		break;
+
+	"from state" = "to state";
+	"command" = next "command";
+};
+
+```
+
+The origin and other state info in the final "to state" is the prediction result and is used for rendering the scene that frame. The portion where the command is run is simply the portion where all of the player state data is copied into the shared data structure, the user command is processed (by executing the common code in the pm_shared routines in Half-Life's case), and the resulting data is copied back out to the "to state".
+
+最终目标状态中的来源或是其他状态信息就是**预测**的结果，并且被用来渲染那一帧的场景。被执行的那一部分指令就是被拷贝进共享数据体中的玩家所有状态信息以及被处理过的用户指令的一部分，而最终的结果数据会从目标状态中拷贝回去。
+
+There are a few important caveats to this system. First, you'll notice that, depending upon the client's latency and how fast the client is generating user commands (i.e., the client's framerate), the client will most often end up running the same commands over and over again until they are finally acknowledged by the server and dropped from the list (a sliding window in Half-Life's case) of commands yet to be acknowledged. The first consideration is how to handle any sound effects and visual effects that are created in the shared code. Because commands can be run over and over again, it's important not to create footstep sounds, etc. multiple times as the old commands are re-run to update the predicted position. In addition, it's important for the server not to send the client effects that are already being predicted on the client. However, the client still must re-run the old commands or else there will be no way for the server to correct any erroneous prediction by the client. The solution to this problem is easy: the client just marks those commands which have not been predicted yet on the client and only plays effects if the user command is being run for the first time on the client.
+
+这里有一些该系统重要的注意事项。首先，你会注意到，基于客户端的延迟已经客户端生成用户指令的速度（即客户端的帧率）客户端在收到服务器的确认并且丢弃那些被确认后的指令之前会不断地重复执行同样地命令（就像《半条命》中的滑动窗口）。首先要考虑的就是那些通过共享代码生成出来的音效或者视觉特效。由于命令会被不断地执行，那么不产生脚步声就显得很重要。
