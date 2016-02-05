@@ -202,5 +202,15 @@ Replicating the necessary fields to the client and handling all of the intermedi
 
 A system where movements and weapon effects are predicted client-side is a very workable system. For instance, this is the system that the Quake3 engine supports. One of the problems with this system is that you still have to have a feel for your latency to determine how to lead your targets (for instant hit weapons). In other words, although you get to hear the weapons firing immediately, and your position is totally up-to-date, the results of your shots are still subject to latency. For example, if you are aiming at a player running perpendicular to your view and you have 100 milliseconds of latency and the player is running at 500 units per second, then you'll need to aim 50 units in front of the target to hit the target with an instant hit weapon. The greater the latency, the greater the lead targeting needed. Getting a "feel" for your latency is difficult. Quake3 attempted to mitigate this by playing a brief tone whenever you received confirmation of your hits. That way, you could figure out how far to lead by firing your weapons in rapid succession and adjusting your leading amount until you started to hear a steady stream of tones. Obviously, with sufficient latency and an opponent who is actively dodging, it is quite difficult to get enough feedback to focus in on the opponent in a consistent fashion. If your latency is fluctuating, it can be even harder.
 
-玩家行为和武器效果的客户端预演系统是一个非常具有可行性的系统。比如《雷神3》引擎就支持这样的系统。这个系统存在一个问题就是在决定如何瞄准你的目标的时候，你依然能感受到延迟的影响（相对于瞬间发射）。换句话说，虽然你瞬间听到了武器发射的声音，且你的位置信息也已经更新到了最新，你射击的结果也依然要取决于延迟。比如说，你正在瞄准一个跑进你视野范围内的敌人，此时你有100毫秒的网络延迟，而敌人每秒钟会移动500个距离单位，那么你就要瞄准目标前方50个单位处才能击中他。延迟越大，瞄准的难度也就越大。而感受你的“延迟”却是十分困难的。《雷神3》尝试在你收到开枪指令的确认时播放一段提示音以减轻你的这种感觉，这样的话，你就可以很快的意识到在瞄准目标的时候需要提前多少距离来
+玩家行为和武器效果的客户端预演系统是一个非常具有可行性的系统。比如《雷神3》引擎就支持这样的系统。这个系统存在一个问题就是在决定如何瞄准你的目标的时候，你依然能感受到延迟的影响（相对于瞬间发射）。换句话说，虽然你瞬间听到了武器发射的声音，且你的位置信息也已经更新到了最新，你射击的结果也依然要取决于延迟。比如说，你正在瞄准一个跑进你视野范围内的敌人，此时你有100毫秒的网络延迟，而敌人每秒钟会移动500个距离单位，那么你就要瞄准目标前方50个单位处才能击中他。延迟越大，瞄准的难度也就越大。而感受你的“延迟”却是十分困难的。《雷神3》尝试在你收到开枪指令的确认时播放一段提示音以减轻你的这种感觉，这样的话，你就可以很快的意识到在瞄准目标的时候需要提前多少距离来，并且调整你的准心直到你听到了确认音。当然，在一定的延迟下想要瞄准一个不断躲避的对手并不是一件容易的事情，如果你的延迟还不稳定的话，就更为困难了。
 
+## Display of Targets
+## 目标的显示
+
+Another important aspect influencing how a user perceives the responsiveness of the world is the mechanism for determining, on the client, where to render the other players. The two most basic mechanisms for determining where to display objects are extrapolation and interpolation4.
+
+影响用户在游戏世界中的交互反馈体验的另一个方面是如何确认其他玩家在客户端的渲染位置信息。其中2条最简单的用于确定玩家位置的机制是**外推法**和**内插法**
+
+For extrapolation, the other player/object is simulated forward in time from the last known spot, direction, and velocity in more or less a ballistic manner. Thus, if you are 100 milliseconds lagged, and the last update you received was that (as above) the other player was running 500 units per second perpendicular to your view, then the client could assume that in "real time" the player has moved 50 units straight ahead from that last known position. The client could then just draw the player at that extrapolated position and the local player could still more or less aim right at the other player.
+
+对于**外推法**，另一个玩家/对象会根据上一次已知的位置和方向以及速度模拟玩家之后的移动
