@@ -221,4 +221,25 @@ The biggest drawback of using extrapolation is that player's movements are not v
 
 The other method for determining where to display objects and players is interpolation. Interpolation can be viewed as always moving objects somewhat in the past with respect to the last valid position received for the object. For instance, if the server is sending 10 updates per second (exactly) of the world state, then we might impose 100 milliseconds of interpolation delay in our rendering. Then, as we render frames, we interpolate the position of the object between the last updated position and the position one update before that (alternatively, the last render position) over that 100 milliseconds. As the object just gets to the last updated position, we receive a new update from the server (since 10 updates per second means that the updates come in every 100 milliseconds) we can start moving toward this new position over the next 100 milliseconds.
 
-另一种用语确认游戏对象和角色渲染位置的方法就是**内插法**。**内插法**可以被看做总是以物体之前的相对位置来演算之后的移动。
+另一种用语确认游戏对象和角色渲染位置的方法就是**内插法**。**内插法**可以被看做总是以物体之前的相对位置来演算之后的移动。比如说，服务器以每秒10次的频率广播世界状态，那么我们就应该施加一个100毫秒的内插延迟在我们的渲染上。那么，当我们进行帧渲染时，我们对上次以及上上更新的位置（或者说渲染位置）之间的100毫秒进行差值演算。当对象正好移动到上一次更新的位置时，我们从服务器接收了新的位置信息（将10次每秒的更新视作每100毫秒更新一次），我们就可以在之后的100毫秒中往这个新的位置进行移动。
+
+If one of the update packets fails to arrive, then there are two choices: We can start extrapolating the player position as noted above (with the large potential errors noted) or we can simply have the player rest at the position in the last update until a new update arrives (causing the player's movement to stutter).
+The general algorithm for this type of interpolation is as follows:
+
+如果有一个更新包没有正常收获，那么此时有2个选择：我们可以以上述的方式对玩家的位置进行**外推**演算（可能有很大的潜在误差），或者我们可以简单的让玩家待在圆度直到有下一次的位置更新（会造成玩家移动的卡顿）对于这种类型的内插算法通常如下：
+
+1. Each update contains the server time stamp for when it was generated6
+1. 每一次更新都带有服务器的时间戳来表明这次更新的生成时间
+
+2. From the current client time, the client computes a target time by subtracting the interpolation time delta (100 ms)
+2. 对于当前的客户端时间而言，客户端通过减去内插的时间增量（100毫秒）计算出一个目标时间。
+
+3. If the target time is in between the timestamp of the last update and the one before that, then those timestamps determine what fraction of the time gap has passed.
+3. 如果目标时间介于上一次更新时间和上上次更新时间之间，那么这个时间戳就可以计算出一个过去时间间隔内的分数
+
+4. This fraction is used to interpolate any values (e.g., position and angles).
+4. 这个分数就可以用于对任何数值进行差值计算。
+
+In essence, you can think of interpolation, in the above example, as buffering an additional 100 milliseconds of data on the client. The other players, therefore, are drawn where they were at a point in the past that is equal to your exact latency plus the amount of time over which you are interpolating. To deal with the occasional dropped packet, we could set the interpolation time as 200 milliseconds instead of 100 milliseconds. This would (again assuming 10 updates per second from the server) allow us to entirely miss one update and still have the player interpolating toward a valid position, often moving through this interpolation without a hitch. Of course, interpolating for more time is a tradeoff, because it is trading additional latency (making the interpolated player harder to hit) for visual smoothness.
+
+本质上，在上面的例子中，你可以把**内插法**，视作是在客户端缓冲100毫秒的数据.其他的玩家因此被绘制在了他们之前位于的地方，
