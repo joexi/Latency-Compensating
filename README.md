@@ -229,17 +229,107 @@ The general algorithm for this type of interpolation is as follows:
 如果有一个更新包没有正常收获，那么此时有2个选择：我们可以以上述的方式对玩家的位置进行**外推**演算（可能有很大的潜在误差），或者我们可以简单的让玩家待在圆度直到有下一次的位置更新（会造成玩家移动的卡顿）对于这种类型的内插算法通常如下：
 
 1. Each update contains the server time stamp for when it was generated6
-1. 每一次更新都带有服务器的时间戳来表明这次更新的生成时间
+
+	每一次更新都带有服务器的时间戳来表明这次更新的生成时间
 
 2. From the current client time, the client computes a target time by subtracting the interpolation time delta (100 ms)
-2. 对于当前的客户端时间而言，客户端通过减去内插的时间增量（100毫秒）计算出一个目标时间。
+
+	对于当前的客户端时间而言，客户端通过减去内插的时间增量（100毫秒）计算出一个目标时间。
 
 3. If the target time is in between the timestamp of the last update and the one before that, then those timestamps determine what fraction of the time gap has passed.
-3. 如果目标时间介于上一次更新时间和上上次更新时间之间，那么这个时间戳就可以计算出一个过去时间间隔内的分数
+
+	如果目标时间介于上一次更新时间和上上次更新时间之间，那么这个时间戳就可以计算出一个过去时间间隔内的分数
 
 4. This fraction is used to interpolate any values (e.g., position and angles).
-4. 这个分数就可以用于对任何数值进行差值计算。
+
+	这个分数就可以用于对任何数值进行差值计算。
 
 In essence, you can think of interpolation, in the above example, as buffering an additional 100 milliseconds of data on the client. The other players, therefore, are drawn where they were at a point in the past that is equal to your exact latency plus the amount of time over which you are interpolating. To deal with the occasional dropped packet, we could set the interpolation time as 200 milliseconds instead of 100 milliseconds. This would (again assuming 10 updates per second from the server) allow us to entirely miss one update and still have the player interpolating toward a valid position, often moving through this interpolation without a hitch. Of course, interpolating for more time is a tradeoff, because it is trading additional latency (making the interpolated player harder to hit) for visual smoothness.
 
-本质上，在上面的例子中，你可以把**内插法**，视作是在客户端缓冲100毫秒的数据.其他的玩家因此被绘制在了他们之前位于的地方，
+本质上，在上面的例子中，你可以把**内插法**，视作是在客户端缓冲100毫秒的数据.其他的玩家因此被绘制在了他们之前位于的地方,即你的确切延迟加上你插值的时间。对于偶然的丢包事件，我们可以把内插的时间从100毫秒修改为200毫秒。这可以使得我们能够完全丢掉一个更新包而依然能够通过插值顺利使玩家处于合理的位置上。当然，**内插法**更多时候像是一种交易，他付出一些额外的延迟（使得经过内插演算的玩家更难以瞄准）来换取更平滑的视觉表现。
+
+In addition, the above type of interpolation (where the client tracks only the last two updates and is always moving directly toward the most recent update) requires a fixed time interval between server updates. The method also suffers from visual quality issues that are difficult to resolve. The visual quality issue is as follows. Imagine that the object being interpolated is a bouncing ball (which actually accurately describes some of our players). At the extremes, the ball is either high in the air or hitting the pavement. However, on average, the ball is somewhere in between. If we only interpolate to the last position, it is very likely that this position is not on the ground or at the high point. The bounciness of the ball is "flattened" out and it never seems to hit the ground. This is a classical sampling problem and can be alleviated by sampling the world state more frequently. However, we are still quite likely never actually to have an interpolation target state be at the ground or at the high point and this will still flatten out the positions.
+
+此外， 上述关于**内插法**的类型（客户端只跟踪最近的2次更新，并且总是直接向最近一次更新的位置进行移动）需要在服务器以固定的时间间隔进行每一次更新。这个方法依然会受到那些难以解决的视觉质量问题的影响。视觉质量问题如下：
+试想一下，被插值处理的对象是一个弹性球（实际上和我们的玩家角色很相似）在极端情况下，球既不是在高空中也没有撞击地面，球应该在中间的某处，如果我们只是将其向上一次更新的位置进行差值，那么很可能这个位置既不是在地面上也不是在高空中，球的反弹力被“数据化”出来，它看起来便永远都不会砸到地上。这是一个景点的采样问题，并且可以通过更多的对世界状态的采样来解决。然而，我们似乎可能没有一个被插值对象的状态是处于地面或者高空中的，他依然会处于中间的位置。
+
+In addition, because different users have different connections, forcing updates to occur at a lockstep like 10 updates per second is forcing a lowest common denominator on users unnecessarily. In Half-Life, we allow the user to ask for as many updates per second as he or she wants (within limit). Thus, a user with a fast connection could receive 50 updates per second if the user wanted. By default, Half-Life sends 20 updates per second to each player the Half-Life client interpolates players (and many other objects) over a period of 100 milliseconds.7
+
+此外，由于不同的玩家基于不同的链接，强制所有用户的更新步调一致是没有必要的。在 《半条命》中，我们允许用户按自己的需求每秒进行更新（有上限）。这样，拥有高链接速度的用户就可以每秒钟更新50次如果他期望如此，而默认状态下，《半条命》每秒发送20次更新给每一个玩家，《半条命》的客户端则对玩家（以及更多的其他的对象）进行100毫秒时间区间内的差值处理。
+
+To avoid the flattening of the bouncing ball problem, we employ a different algorithm for interpolation. In this method, we keep a more complete "position history" for each object that might be interpolated.
+
+要解决弹球的“flattening”问题，我们采用了另一个不同的算法来进行插值。在这种方法中，我们保留了每个需要插值处理的对象更完整的“坐标历史”。
+
+The position history is the timestamp and origin and angles (and could include any other data we want to interpolate) for the object. Each update we receive from the server creates a new position history entry, including timestamp and origin/angles for that timestamp. To interpolate, we compute the target time as above, but then we search backward through the history of positions looking for a pair of updates that straddle the target time. We then use these to interpolate and compute the final position for that frame. This allows us to smoothly follow the curve that completely includes all of our sample points. If we are running at a higher framerate than the incoming update rate, we are almost assured of smoothly moving through the sample points, thereby minimizing (but not eliminating, of course, since the pure sampling rate of the world updates is the limiting factor) the flattening problem described above.
+
+坐标历史就是时间戳，物体的坐标以及方向（也可能包括其他我们需要插值的数据）。每一次我们从服务器获取更新的时候就创建一条新的坐标历史条目，包括了时间戳和该时间戳对应的坐标和方向。为了进行插值，我们用上面的方式计算目标时间，但是我们回过头在坐标历史中搜寻一对跨越目标时间的更新。我们可以使用它们来进行插值并且计算出那一帧状态下的最终位置。这使我们可以平滑的沿着包含了所有采样坐标的曲线。如果我们以帧率高于数据更新频率的方式运行游戏，我们可以几乎保证能沿着采样坐标平滑地移动，从而最大限度减少（并不是完全消除，因为世界的更新的采样频率是有限制的）上面所说的“flattening”问题
+
+The only consideration we have to layer on top of either interpolation scheme is some way to determine that an object has been forcibly teleported, rather than just moving really quickly. Otherwise we might "smoothly" move the object over great distances, causing the object to look like it's traveling way too fast. We can either set a flag in the update that says, "don't interpolate" or "clear out the position history," or we can determine if the distance between the origin and one update and another is too big, and thereby presumed to be a teleportation/warp. In that case, the solution is probably to just move the object to the latest know position and start interpolating from there.
+
+对于这些插值方式我们唯一需要考虑的是需要一种方式来确认一个对象是被远程传送的而不是以非常快的速度进行移动。否则我们就会“平滑”地将这个对象移动一大段距离，让这个物体看起来就像是以很快的速度进行移动一样。我们可以在更新信息中设置一个标识位表示“不要插值”或者“清空坐标历史”，或者我们认为当2个坐标点之间的距离太大时，就可以认为是传送/跳跃。在这个例子中，解决方案可能就是直接将对象移动到上一次已知的位置上并且基于此再进行之后的插值。
+
+## Lag Compensation
+## 延迟补偿
+Understanding interpolation is important in designing for lag compensation because interpolation is another type of latency in a user's experience. To the extent that a player is looking at other objects that have been interpolated, then the amount of interpolation must be taken into consideration in computing, on the server, whether the player's aim was true.
+了解**内插法**对于设计延迟补偿机制是十分重要的，因为**内插法**在用户的体验中其实是另一种意义上的延迟。在服务器的计算中，当玩家看到其他已经经过插值处理的对象并且进行瞄准时，其内插的量必须被考虑进计算中。
+
+Lag compensation is a method of normalizing server-side the state of the world for each player as that player's user commands are executed. You can think of lag compensation as taking a step back in time, on the server, and looking at the state of the world at the exact instant that the user performed some action. The algorithm works as follows:
+
+延迟补偿是一种服务器端每一个用户指令被执行之后每一个玩家的世界状态的标准化方式。你可以把延迟补偿视作在服务器端将时间倒退一步，然后看着在用户执行指令后的世界精确的状态。算法如下：
+
+1. Before executing a player's current user command, the server:
+	
+	在执行一条当前的用户指令时，服务端会：
+	
+	1. Computes a fairly accurate latency for the player
+	
+	相对准确地计算该玩家的延迟
+	
+	2. Searches the server history (for the current player) for the world update that was sent to the player and received by the player just before the player would have issued the movement command
+	
+	搜索服务器端对于当前用户在提交这个行为指令发送给用户的更新历史。
+	
+	3. From that update (and the one following it based on the exact target time being used), for each player in the update, move the other players backwards in time to exactly where they were when the current player's user command was created. This moving backwards must account for both connection latency and the interpolation amount8 the client was using that frame.
+	
+	对于数据更新涉及的每一个玩家，实时地将其他玩家移动到该条用户指令产生时真正处于的位置，位置的回滚必须要同时考虑到网络的延迟以及客户端对于该帧的插值的量。
+	
+2. Allow the user command to execute (including any weapon firing commands, etc., that will run ray casts against all of the other players in their "old" positions).
+
+	允许用户指令的执行（包括了所有武器射击的指令等，这会对所有物体之前的位置发射射线）
+
+
+3. Move all of the moved/time-warped players back to their correct/current positions
+	
+	将所有移动后/位置错乱的玩家移动回他们正确的/当前的位置
+	
+Note that in the step where we move the player backwards in time, this might actually require forcing additional state info backwards, too (for instance, whether the player was alive or dead or whether the player was ducking). The end result of lag compensation is that each local client is able to directly aim at other players without having to worry about leading his or her target in order to score a hit. Of course, this behavior is a game design tradeoff.
+
+注意当我们把玩家位置进行回滚的时候，，可能也会需要将其的附加状态进行回滚（比如当一个玩家是否避开了射击可能影响他是否存活）。延迟补偿的最终结果就是使得每一个客户端的玩家在瞄准他们的目标时不需要考虑提前量。当然，这种行为也是一种游戏设计的权衡
+
+## Game Design Implications of Lag Compensation
+## 一些关于延迟补偿的游戏设计启示
+
+The introduction of lag compensation allows for each player to run on his or her own clock with no apparent latency. In this respect, it is important to understand that certain paradoxes or inconsistencies can occur. Of course, the old system with the authoritative server and "dumb" or simple clients had it's own paradoxes. In the end, making this tradeoff is a game design decision. For Half-Life, we believe deciding in favor of lag compensation was a justified game design decision.
+
+延迟补偿的引入是为了使每一个玩家可以在没有明显延迟的情况下各自执行自己的时钟。为此，有必要意识到一些悖论或者矛盾是有可能发生的。当然，那些包含着权威服务器和哑巴客户端或者说简单客户端的传统的系统也会有自己的悖论。最后采取这种权衡方式也是游戏设计角度的决定。对于《半条命》来说，我们认为采用延迟补偿是一个正确的游戏设计。
+
+The first problem of the old system was that you had to lead your target by some amount that was related to your latency to the server. Aiming directly at another player and pressing the fire button was almost assured to miss that player. The inconsistency here is that aiming is just not realistic and that the player controls have non-predictable responsiveness.
+
+传统系统首要的问题就在于当你总是需要一些预判来瞄准目标，具体的值则取决你和服务器之间的延迟。直接瞄准目标然后设计几乎是肯定无法击中的。这里的矛盾点就在于瞄准本身并不是真实的，用户的操作响应速度是无法预知的。
+
+With lag compensation, the inconsistencies are different. For most players, all they have to do is acquire some aiming skill and they can become proficient (you still have to be able to aim). Lag compensation allows the player to aim directly at his or her target and press the fire button (for instant hit weapons9). The inconsistencies that sometimes occur, however, are from the points of view of the players being fired upon.
+
+对于延迟补偿机制来说，矛盾的地方就不同了。对于大部分玩家来说，他们所要做的就是学习一些瞄准的技巧并且能够熟练使用（你依然是需要瞄准的）。延迟补偿是的玩家能够直接瞄准他们的目标然后射击。矛盾之处就在于被击中玩家的视点。
+
+For instance, if a highly lagged player shoots at a less lagged player and scores a hit, it can appear to the less lagged player that the lagged player has somehow "shot around a corner"10. In this case, the lower lag player may have darted around a corner. But the lagged player is seeing everything in the past. To the lagged player, s/he has a direct line of sight to the other player. The player lines up the crosshairs and presses the fire button. In the meantime, the low lag player has run around a corner and maybe even crouched behind a crate. If the high lag player is sufficiently lagged, say 500 milliseconds or so, this scenario is quite possible. Then, when the lagged player's user command arrives at the server, the hiding player is transported backward in time and is hit. This is the extreme case, and in this case, the low ping player says that s/he was shot from around the corner. However, from the lagged player's point of view, they lined up their crosshairs on the other player and fired a direct hit. From a game design point of view, the decision for us was easy: let each individual player have completely responsive interaction with the world and his or her weapons.
+
+比如说，一个高延迟的玩家向一个低延迟玩家射击，对于那个低延迟的玩家看起来就像高延迟玩家“拐角射击”。在这个案例中，那个低延迟的玩家已经拐过了墙角。而那个高延迟的家伙看到的依然是过去的景象。对于他来说，他望向其他玩家的视线总是笔直的直线。当他看到有其他的玩家经过拐角时按下了射击按钮。在这个时候那个低延迟的玩家可能早就跑过了拐角处，甚至可能已经蹲到了箱子的后面.如果那个高延迟的家伙有足够高的延迟，比如说500毫秒之类的，那么这种情况就很有可能发生。那么，当这个高延迟玩家的用户指令抵达服务器端，那么这个已经躲在箱子后面的家伙可能就会在之前的某个位置上被击中。这是一个极端的例子，在这个案例中，低延迟的玩家在拐角之后被射杀。然而，从高延迟的玩家的视点看去，目标是在拐角前被击杀的。从游戏设计的角度来看，我们的决定很简单，让每一个独立的玩家都能和武器以及环境完全地互相作用。
+
+In addition, the inconsistency described above is much less pronounced in normal combat situations. For first-person shooters, there are two more typical cases. First, consider two players running straight at each other pressing the fire button. In this case, it's quite likely that lag compensation will just move the other player backwards along the same line as his or her movement. The person being shot will be looking straight at his attacker and no "bullets bending around corners" feeling will be present.
+
+此外，上述的矛盾在正常的游戏中是很少出现的。对于第一人称射击游戏而言，还有2个典型的案例。首先，想象一下两个玩家互相冲向对方并且按下了射击按钮。在这个案例中，看起来延迟补偿应该会将玩家沿着他们的行动轨迹即同一条直线进行回滚。被射中的人会面向对方，不会有任何“拐角射击”的问题出现。
+
+The next example is two players, one aiming at the other while the other dashes in front perpendicular to the first player. In this case, the paradox is minimized for a wholly different reason. The player who is dashing across the line of sight of the shooter probably has (in first-person shooters at least) a field of view of 90 degrees or less. In essence, the runner can't see where the other player is aiming. Therefore, getting shot isn't going to be surprising or feel wrong (you get what you deserve for running around in the open like a maniac). Of course, if you have a tank game, or a game where the player can run one direction, and look another, then this scenario is less clear-cut, since you might see the other player aiming in a slightly incorrect direction.
+
+另一个例子中，两个玩家，其中一个在另一个从侧面冲向自己时瞄准了对方。在这个案例中，矛盾则因为完全不同的原因最小化了。那个冲向射击者视线的玩家可能呈90度（至少从第一人称角度来看）或更小的
