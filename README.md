@@ -278,28 +278,28 @@ Lag compensation is a method of normalizing server-side the state of the world f
 
 延迟补偿是一种服务器端每一个用户指令被执行之后每一个玩家的世界状态的标准化方式。你可以把延迟补偿视作在服务器端将时间倒退一步，然后看着在用户执行指令后的世界精确的状态。算法如下：
 
-1. Before executing a player's current user command, the server:
+* Before executing a player's current user command, the server:
 	
 	在执行一条当前的用户指令时，服务端会：
 	
-	1. Computes a fairly accurate latency for the player
+	* Computes a fairly accurate latency for the player
 	
 	相对准确地计算该玩家的延迟
 	
-	2. Searches the server history (for the current player) for the world update that was sent to the player and received by the player just before the player would have issued the movement command
+	* Searches the server history (for the current player) for the world update that was sent to the player and received by the player just before the player would have issued the movement command
 	
 	搜索服务器端对于当前用户在提交这个行为指令发送给用户的更新历史。
 	
-	3. From that update (and the one following it based on the exact target time being used), for each player in the update, move the other players backwards in time to exactly where they were when the current player's user command was created. This moving backwards must account for both connection latency and the interpolation amount8 the client was using that frame.
+	* From that update (and the one following it based on the exact target time being used), for each player in the update, move the other players backwards in time to exactly where they were when the current player's user command was created. This moving backwards must account for both connection latency and the interpolation amount8 the client was using that frame.
 	
 	对于数据更新涉及的每一个玩家，实时地将其他玩家移动到该条用户指令产生时真正处于的位置，位置的回滚必须要同时考虑到网络的延迟以及客户端对于该帧的插值的量。
 	
-2. Allow the user command to execute (including any weapon firing commands, etc., that will run ray casts against all of the other players in their "old" positions).
+* Allow the user command to execute (including any weapon firing commands, etc., that will run ray casts against all of the other players in their "old" positions).
 
 	允许用户指令的执行（包括了所有武器射击的指令等，这会对所有物体之前的位置发射射线）
 
 
-3. Move all of the moved/time-warped players back to their correct/current positions
+* Move all of the moved/time-warped players back to their correct/current positions
 	
 	将所有移动后/位置错乱的玩家移动回他们正确的/当前的位置
 	
