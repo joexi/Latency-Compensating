@@ -332,7 +332,7 @@ In addition, the inconsistency described above is much less pronounced in normal
 
 The next example is two players, one aiming at the other while the other dashes in front perpendicular to the first player. In this case, the paradox is minimized for a wholly different reason. The player who is dashing across the line of sight of the shooter probably has (in first-person shooters at least) a field of view of 90 degrees or less. In essence, the runner can't see where the other player is aiming. Therefore, getting shot isn't going to be surprising or feel wrong (you get what you deserve for running around in the open like a maniac). Of course, if you have a tank game, or a game where the player can run one direction, and look another, then this scenario is less clear-cut, since you might see the other player aiming in a slightly incorrect direction.
 
-另一个例子中，两个玩家，其中一个在另一个从侧面冲向自己时瞄准了对方。在这个案例中，矛盾则因为完全不同的原因最小化了。那个冲向射击者视线的玩家可能呈90度（至少从第一人称角度来看）或更小的。从本质上来说，冲刺的那个人并不知道另一个玩家是不是在瞄准。所以，被击中也没什么好奇怪或者觉得哪里有什么不对的（当你想疯子一样冲向一片开阔区域是，这就是你应得的下场）。当然，如果你是在坦克游戏或者那些玩家只能往一个方向移动的游戏中看着对方，那么这个场景就不是那么明确了，因为你可能会意识到对方正在瞄准在一个错误的方向上。
+另一个例子中，两个玩家，其中一个在另一个从侧面冲向自己时瞄准了对方。在这个案例中，矛盾则因为完全不同的原因最小化了。那个冲向射击者视线的玩家可能呈90度（至少从第一人称角度来看）或更小。从本质上来说，冲刺的那个人并不知道另一个玩家是不是在瞄准。所以，被击中也没什么好奇怪或者觉得哪里有什么不对的（当你想疯子一样冲向一片开阔区域是，这就是你应得的下场）。当然，如果你是在坦克游戏或者那些玩家只能往一个方向移动的游戏中看着对方，那么这个场景就不是那么明确了，因为你可能会意识到对方正在瞄准在一个错误的方向上。
 
 ## Conclusion
 ## 结论
@@ -366,4 +366,18 @@ Lag compensation is a tool to ameliorate the effects of latency on today's actio
 	
 7. The time spacing of these updates is not necessarily fixed. The reason why is that during high activity periods of the game (especially for users with lower bandwidth connections), it's quite possible that the game will want to send you more data than your connection can accommodate. If we were on a fixed update interval, then you might have to wait an entire additional interval before the next packet would be sent to the client. However, this doesn't match available bandwidth effectively. Instead, the server, after sending every packet to a player, determines when the next packet can be sent. This is a function of the user's bandwidth or "rate" setting and the number of updates requested per second. If the user asks for 20 updates per second, then it will be at least 50 milliseconds before the next update packet can be sent. If the bandwidth choke is active (and the server is sufficiently high framerate), it could be 61, etc., milliseconds before the next packet gets sent. Thus, Half-Life packets can be somewhat arbitrarily spaced. The simple move to latest goal interpolation schemes don't behave as well (think of the old anchor point for movement as being variable) under these conditions as the position history interpolation method (described below). 
 
-	这些更新之间的间隔不一定非要是固定的。因为在高实时性的游戏（特别是对于网络较差的用户）中，很有可能游戏会希望发送大于你带宽负荷的游戏。如果我们是固定时间更新的，那么在你下一次发送更新之前就必须要等待一个完整的时间间隔。然而这并不是有效利用带宽的方式。相反，在服务器中，会在每一个数据包发送给客户端之后再决定下一次发送更新包的时间.这是个关于用户带宽设置以及每秒钟的更新频率的函数
+	这些更新之间的间隔不一定非要是固定的。因为在高实时性的游戏（特别是对于网络较差的用户）中，很有可能游戏会希望发送大于你带宽负荷的游戏数据。如果我们是固定时间更新的，那么在你下一次发送更新之前就必须要等待一个完整的时间间隔。然而这并不是有效利用带宽的方式。相反，在服务器中，会在每一个数据包发送给客户端之后再决定下一次发送更新包的时间.这是个关于用户带宽设置以及每秒钟的更新频率的函数。如果用户希望每秒钟更新20次，那么在下一次发送前至少需要等待50毫秒。如果带宽阻塞（并且服务器有更高的帧刷新率）那么这个值可能是61毫秒或者更多。所以，《半条命》可以以任意间隔发送。在这种方式下对于简单移动到下一个目标点的坐标历史插值方式不会有很好的效果（考虑到移动的起始锚点是个变量）。
+
+8. Which Half-Life encodes in the lerp_msec field of the usercmd_t structure described previously. 
+	
+	《半条命》将上面提到的usercmd_t结构压缩到lerp_msec字段中
+
+9. For weapons that fire projectiles, lag compensation is more problematic. For instance, if the projectile lives autonomously on the server, then what time space should the projectile live in? Does every other player need to be "moved backward" every time the projectile is ready to be simulated and moved by the server? If so, how far backward in time should the other players be moved? These are interesting questions to consider. In Half-Life, we avoided them; we simply don't lag compensate projectile objects (that's not to say that we don't predict the sound of you firing the projectile on the client, just that the actual projectile is not lag compensated in any way). 
+	
+	对于发射子弹的武器来说，延迟补偿有跟多的问题。比如说，如果服务器端有一个字段对象，那么它应该处于哪一个时间间隔中呢，当它在服务器上移动的时候，其他的玩家要不要回滚呢?如果回滚又应该回滚多少呢？这是个有趣的问题。在《半条命》中，我们避免了这种情况，我们不对子弹物体做延迟补偿处理（这并不代表我们不会预演在客户端发射子弹时的音效，只是子弹物体本身不会参与延迟补偿）
+
+10. This is the phrase our user community has adopted to describe this inconsistency. 
+
+	这是在我们社区中用于描述这种不一致性的通俗短语
+
+	
