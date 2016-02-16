@@ -341,7 +341,9 @@ Lag compensation is a tool to ameliorate the effects of latency on today's actio
 
 延迟补偿是一种改善现在动作类游戏体验的工具。由于延迟补偿会改变玩家在游戏中的感觉，所以是否引入延迟补偿就要由游戏的设计者来决定。对于《半条命》，《军团要塞》，《反恐精英》来说，延迟补偿的利大于弊。
 
+## Footnotes
 ## 脚注
+
 1. In the Half-Life engine, it is possible to ask the client-side prediction algorithm to account for some, but not all, of the latency in performing prediction. The user could control the amount of prediction by changing the value of the "pushlatency" console variable to the engine. This variable is a negative number indicating the maximum number of milliseconds of prediction to perform. If the number is greater (in the negative) than the user's current latency, then full prediction up to the current time occurs. In this case, the user feels zero latency in his or her movements. Based upon some erroneous superstition in the community, many users insisted that setting pushlatency to minus one-half of the current average latency was the proper setting. Of course, this would still leave the player's movements lagged (often described as if you are moving around on ice skates) by half of the user's latency. All of this confusion has brought us to the conclusion that full prediction should occur all of the time and that the pushlatency variable should be removed from the Half-Life engine.
 	
 	在《半条命》的游戏中，你可以让客户端的预测算法中考虑进部分执行预测时的延迟情况。用户可以通过在控制台修改 “pushlantency”变量以达到控制预测量的效果。这个变量是一个用于表明最大预测时间毫秒数的负数。如果这个数大于（对负数而言）玩家当前的延迟数，那么就充分预测那些到当前为止发生的事情。在这种情况下，用户就几乎感觉不到自己移动时的延迟。由于一些误传的谣言，很多玩家认为将pushlatency设置为当前延迟的一半是最正确的选择。当然，这依然会使玩家的移动有实际延迟一半的延迟的感觉（经常表现为滑步）。这些东西总结下来就是你总是执行完整的预测，然pushlatency这个变量应该从《半条命》游戏中移除。
