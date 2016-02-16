@@ -332,4 +332,38 @@ In addition, the inconsistency described above is much less pronounced in normal
 
 The next example is two players, one aiming at the other while the other dashes in front perpendicular to the first player. In this case, the paradox is minimized for a wholly different reason. The player who is dashing across the line of sight of the shooter probably has (in first-person shooters at least) a field of view of 90 degrees or less. In essence, the runner can't see where the other player is aiming. Therefore, getting shot isn't going to be surprising or feel wrong (you get what you deserve for running around in the open like a maniac). Of course, if you have a tank game, or a game where the player can run one direction, and look another, then this scenario is less clear-cut, since you might see the other player aiming in a slightly incorrect direction.
 
-另一个例子中，两个玩家，其中一个在另一个从侧面冲向自己时瞄准了对方。在这个案例中，矛盾则因为完全不同的原因最小化了。那个冲向射击者视线的玩家可能呈90度（至少从第一人称角度来看）或更小的
+另一个例子中，两个玩家，其中一个在另一个从侧面冲向自己时瞄准了对方。在这个案例中，矛盾则因为完全不同的原因最小化了。那个冲向射击者视线的玩家可能呈90度（至少从第一人称角度来看）或更小的。从本质上来说，冲刺的那个人并不知道另一个玩家是不是在瞄准。所以，被击中也没什么好奇怪或者觉得哪里有什么不对的（当你想疯子一样冲向一片开阔区域是，这就是你应得的下场）。当然，如果你是在坦克游戏或者那些玩家只能往一个方向移动的游戏中看着对方，那么这个场景就不是那么明确了，因为你可能会意识到对方正在瞄准在一个错误的方向上。
+
+## Conclusion
+## 结论
+
+Lag compensation is a tool to ameliorate the effects of latency on today's action games. The decision of whether to implement such a system rests with the game designer since the decision directly changes the feel of the game. For Half-Life, Team Fortress and Counter Strike, the benefits of lag compensation easily outweighed the inconsistencies noted above.
+
+延迟补偿是一种改善现在动作类游戏体验的工具。由于延迟补偿会改变玩家在游戏中的感觉，所以是否引入延迟补偿就要由游戏的设计者来决定。对于《半条命》，《军团要塞》，《反恐精英》来说，延迟补偿的利大于弊。
+
+## 脚注
+1. In the Half-Life engine, it is possible to ask the client-side prediction algorithm to account for some, but not all, of the latency in performing prediction. The user could control the amount of prediction by changing the value of the "pushlatency" console variable to the engine. This variable is a negative number indicating the maximum number of milliseconds of prediction to perform. If the number is greater (in the negative) than the user's current latency, then full prediction up to the current time occurs. In this case, the user feels zero latency in his or her movements. Based upon some erroneous superstition in the community, many users insisted that setting pushlatency to minus one-half of the current average latency was the proper setting. Of course, this would still leave the player's movements lagged (often described as if you are moving around on ice skates) by half of the user's latency. All of this confusion has brought us to the conclusion that full prediction should occur all of the time and that the pushlatency variable should be removed from the Half-Life engine.
+	
+	在《半条命》的游戏中，你可以让客户端的预测算法中考虑进部分执行预测时的延迟情况。用户可以通过在控制台修改 “pushlantency”变量以达到控制预测量的效果。这个变量是一个用于表明最大预测时间毫秒数的负数。如果这个数大于（对负数而言）玩家当前的延迟数，那么就充分预测那些到当前为止发生的事情。在这种情况下，用户就几乎感觉不到自己移动时的延迟。由于一些误传的谣言，很多玩家认为将pushlatency设置为当前延迟的一半是最正确的选择。当然，这依然会使玩家的移动有实际延迟一半的延迟的感觉（经常表现为滑步）。这些东西总结下来就是你总是执行完整的预测，然pushlatency这个变量应该从《半条命》游戏中移除。
+	
+2. http://www.quakeforge.net/files/q1source.zip
+
+3. A discussion of cheating and what developers can do to deter it is beyond the scope of this paper.
+	
+	关于作弊和开发者如何反作弊已经超出了本文的讨论范围。
+	
+4. Though hybrids and corrective methods are also possible.
+
+	虽然混合以及纠正的方式也是可以的。
+	
+5. "Jerk" is a measure of how fast accelerative forces are changing. 
+
+	Jerk 是描述加速度变化速度的单位。
+	
+6. It is assumed in this paper that the client clock is directly synchronized to the server clock modulo the latency of the connection. In other words, the server sends the client, in each update, the value of the server's clock and the client adopts that value as its clock. Thus, the server and client clocks will always be matched, with the client running the same timing somewhat in the past (the amount in the past is equal to the client's current latency). Smoothing out discrepancies in the client clock can be solved in various ways.
+
+	本文假设客户端的时钟是直接和服务器同步以计算出链接的延迟的。即是说，当服务器端每次将需要更新的内容发送给客户端时带上服务器的本地时间，客户端采用这个时间作为自己的本地时间。所以，服务器和客户端时钟总是能够匹配上的，当然客户端的时间总是会稍慢于服务端（具体慢多少取决于双方之间的延迟）。将客户端的时间的差异平滑地修正则有很多的方法。
+	
+7. The time spacing of these updates is not necessarily fixed. The reason why is that during high activity periods of the game (especially for users with lower bandwidth connections), it's quite possible that the game will want to send you more data than your connection can accommodate. If we were on a fixed update interval, then you might have to wait an entire additional interval before the next packet would be sent to the client. However, this doesn't match available bandwidth effectively. Instead, the server, after sending every packet to a player, determines when the next packet can be sent. This is a function of the user's bandwidth or "rate" setting and the number of updates requested per second. If the user asks for 20 updates per second, then it will be at least 50 milliseconds before the next update packet can be sent. If the bandwidth choke is active (and the server is sufficiently high framerate), it could be 61, etc., milliseconds before the next packet gets sent. Thus, Half-Life packets can be somewhat arbitrarily spaced. The simple move to latest goal interpolation schemes don't behave as well (think of the old anchor point for movement as being variable) under these conditions as the position history interpolation method (described below). 
+
+	这些更新之间的间隔不一定非要是固定的。因为在高实时性的游戏（特别是对于网络较差的用户）中，很有可能游戏会希望发送大于你带宽负荷的游戏。如果我们是固定时间更新的，那么在你下一次发送更新之前就必须要等待一个完整的时间间隔。然而这并不是有效利用带宽的方式。相反，在服务器中，会在每一个数据包发送给客户端之后再决定下一次发送更新包的时间.这是个关于用户带宽设置以及每秒钟的更新频率的函数
