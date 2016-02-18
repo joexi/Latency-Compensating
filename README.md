@@ -263,7 +263,7 @@ To avoid the flattening of the bouncing ball problem, we employ a different algo
 
 The position history is the timestamp and origin and angles (and could include any other data we want to interpolate) for the object. Each update we receive from the server creates a new position history entry, including timestamp and origin/angles for that timestamp. To interpolate, we compute the target time as above, but then we search backward through the history of positions looking for a pair of updates that straddle the target time. We then use these to interpolate and compute the final position for that frame. This allows us to smoothly follow the curve that completely includes all of our sample points. If we are running at a higher framerate than the incoming update rate, we are almost assured of smoothly moving through the sample points, thereby minimizing (but not eliminating, of course, since the pure sampling rate of the world updates is the limiting factor) the flattening problem described above.
 
-坐标历史就是时间戳，物体的坐标以及方向（也可能包括其他我们需要插值的数据）。每一次我们从服务器获取更新的时候就创建一条新的坐标历史条目，包括了时间戳和该时间戳对应的坐标和方向。为了进行插值，我们用上面的方式计算目标时间，但是我们回过头在坐标历史中搜寻一对跨越目标时间的更新。我们可以使用它们来进行插值并且计算出那一帧状态下的最终位置。这使我们可以平滑的沿着包含了所有采样坐标的曲线。如果我们以帧率高于数据更新频率的方式运行游戏，我们可以几乎保证能沿着采样坐标平滑地移动，从而最大限度减少（并不是完全消除，因为世界的更新的采样频率是有限制的）上面所说的“flattening”问题
+坐标历史就是时间戳，物体的坐标以及方向（也可能包括其他我们需要插值的数据）。每一次我们从服务器获取更新的时候就创建一条新的坐标历史条目，包括了时间戳和该时间戳对应的坐标和方向。为了进行插值，我们用上面的方式计算目标时间，但是我们回过头在坐标历史中搜寻一对跨越目标时间的更新。我们可以使用它们来进行插值并且计算出那一帧状态下的最终位置。这使我们可以平滑的沿着包含了所有采样坐标的曲线。如果我们以帧率高于数据更新频率的方式运行游戏，我们可以几乎保证能沿着采样坐标平滑地移动，从而最大限度减少（并不是完全消除，因为世界的更新的采样频率是有限制的）上面所说的“flattening”问题。
 
 The only consideration we have to layer on top of either interpolation scheme is some way to determine that an object has been forcibly teleported, rather than just moving really quickly. Otherwise we might "smoothly" move the object over great distances, causing the object to look like it's traveling way too fast. We can either set a flag in the update that says, "don't interpolate" or "clear out the position history," or we can determine if the distance between the origin and one update and another is too big, and thereby presumed to be a teleportation/warp. In that case, the solution is probably to just move the object to the latest know position and start interpolating from there.
 
@@ -271,6 +271,7 @@ The only consideration we have to layer on top of either interpolation scheme is
 
 ## Lag Compensation
 ## 延迟补偿
+
 Understanding interpolation is important in designing for lag compensation because interpolation is another type of latency in a user's experience. To the extent that a player is looking at other objects that have been interpolated, then the amount of interpolation must be taken into consideration in computing, on the server, whether the player's aim was true.
 了解**内插法**对于设计延迟补偿机制是十分重要的，因为**内插法**在用户的体验中其实是另一种意义上的延迟。在服务器的计算中，当玩家看到其他已经经过插值处理的对象并且进行瞄准时，其内插的量必须被考虑进计算中。
 
@@ -312,7 +313,7 @@ Note that in the step where we move the player backwards in time, this might act
 
 The introduction of lag compensation allows for each player to run on his or her own clock with no apparent latency. In this respect, it is important to understand that certain paradoxes or inconsistencies can occur. Of course, the old system with the authoritative server and "dumb" or simple clients had it's own paradoxes. In the end, making this tradeoff is a game design decision. For Half-Life, we believe deciding in favor of lag compensation was a justified game design decision.
 
-延迟补偿的引入是为了使每一个玩家可以在没有明显延迟的情况下各自执行自己的时钟。为此，有必要意识到一些悖论或者矛盾是有可能发生的。当然，那些包含着权威服务器和哑巴客户端或者说简单客户端的传统的系统也会有自己的悖论。最后采取这种权衡方式也是游戏设计角度的决定。对于《半条命》来说，我们认为采用延迟补偿是一个正确的游戏设计。
+延迟补偿的引入是为了使每一个玩家可以在没有明显延迟的情况下各自执行自己的时钟。为此，有必要意识这会导致一些悖论或者矛盾的发生。当然，那些包含着权威服务器和哑巴客户端或者说简单客户端的传统的系统也会有自己的悖论。最后采取这种权衡方式也是游戏设计角度的决定。对于《半条命》来说，我们认为采用延迟补偿是一个正确的游戏设计。
 
 The first problem of the old system was that you had to lead your target by some amount that was related to your latency to the server. Aiming directly at another player and pressing the fire button was almost assured to miss that player. The inconsistency here is that aiming is just not realistic and that the player controls have non-predictable responsiveness.
 
