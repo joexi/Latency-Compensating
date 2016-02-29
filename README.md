@@ -381,6 +381,6 @@ Lag compensation is a tool to ameliorate the effects of latency on today's actio
 
 10. This is the phrase our user community has adopted to describe this inconsistency. 
 
-	这是在我们社区中用于描述这种不一致性的通俗短语
+	这是在社区中用于描述这种不一致性的通俗短语
 
 	
